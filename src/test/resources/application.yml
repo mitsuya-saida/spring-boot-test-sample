@@ -1,0 +1,9 @@
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/demo
+    username: demo
+    password: secret
+demo:
+  api:
+    hostname: "http://test.api.server"
+    endpoint: "/v1/demo/api"
