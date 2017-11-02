@@ -8,7 +8,7 @@
 * SpringBoot 1.5.7.RELEASE
 * 詳しくは下記のリポジトリ参照
 ## ここでやったことのコード
-[spring-boot-test-sample](https://github.com/mitsuya-saida/spring-boot-test-sample)
+[spring-boot-test-sample]()
 ## Serviceのテスト
 #### とりあえず動かす
 とりあえずJUnitで普通のテストを書いてみる  
@@ -370,6 +370,90 @@ public class DemoApiFunctionalTest {
 * portをランダムにしたいので@SpringBootTestで設定した
 * @TestExecutionのmergeModeでデフォルトのリスナーに追加している
 
+## RestTemplateのテスト
+#### とりあえず動かす
+###### 実行するAPIの返却値
+同一リポジトリにhttp://localhost:8080/v1/demo/api 
+で以下を返却するAPIをつくった
+```json
+{
+	"code" : "012",
+	"name" : "nanika"
+}
+```
+###### テスト対象のクラス
+```java
+@Component
+public class DemoClient {
+
+    private final RestTemplate restTemplate;
+
+    @Value("${demo.api.hostname}")
+    private String hostname;
+
+    @Value("${demo.api.endpoint}")
+    private String endpoint;
+
+    public DemoClient(RestTemplateBuilder restTemplateBuilder) {
+        this.restTemplate = restTemplateBuilder
+                .setConnectTimeout(1000)
+                .setReadTimeout(1000)
+                .build();
+    }
+
+    public DemoApiResponse get() {
+        UriComponents uriComponents = UriComponentsBuilder.fromUriString(hostname + endpoint).build();
+        return restTemplate.getForObject(uriComponents.toUri(), DemoApiResponse.class);
+    }
+}
+```
+###### application.ymlの設定
+```yaml
+demo:
+  api:
+    hostname: "http://localhost:8080"
+    endpoint: "/v1/demo/api"
+```
+
+###### テストコード
+```java
+@RunWith(SpringRunner.class)
+@RestClientTest(DemoClient.class)
+public class DemoClientTest {
+
+    @Autowired
+    private MockRestServiceServer mockServer;
+
+    @Autowired
+    private DemoClient demoClient;
+
+    @Test
+    public void testGet() {
+        mockServer.expect(requestTo("http://test.api.server/v1/demo/api"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("{\"code\":\"123\",\"name\":\"name\"}", MediaType.APPLICATION_JSON));
+        DemoApiResponse expected = new DemoApiResponse("123", "name");
+
+        DemoApiResponse actual = demoClient.get();
+
+        assertThat(actual, samePropertyValuesAs(expected));
+    }
+
+}
+```
+###### テストに使うapplication.ymlの設定
+```yaml
+demo:
+  api:
+    hostname: "http://test.api.server"
+    endpoint: "/v1/demo/api"
+```
+#### 解説
+* DemoClientではRestTemplateをコンストラクタでRestTemplateBuilderを使ってインスタンス化し、application.ymlで設定されたURLにリクエストするようにした
+* テストではMockRestServiceServerを使ってRestTemplateに割り込んでテストデータが返却できるようにした
+* テストの際はtestパッケージ以下のapplication.ymlの設定を読み込むためMock化したURLにリクエストがいくようになっている
+
+
 ## まとめ
 * CSVを使ってDBのデータをセットアップするのは面倒だけど、基本用意されているものだけでできるので楽ちん
 * TestRestTemplateがあるから機能テストもさっとできる。DBUnit使えばテストデータもぶっこめる
@@ -379,3 +463,4 @@ public class DemoApiFunctionalTest {
 * [Spring bootの公式のテストの資料](https://docs.spring.io/spring-boot/docs/current/reference/html/boot-features-testing.html)
 * [SpringBoot/SpringMVCでRepositoryのテストを楽にするspring-test-dbunit/くらげになりたい](http://wannabe-jellyfish.hatenablog.com/entry/2016/05/22/123658)
 * [Spring Test DBUnit](http://springtestdbunit.github.io/spring-test-dbunit/)
+* [SpringのRestTemplateを使うコンポーネントのJUnitテストはこう書く！！](https://qiita.com/kazuki43zoo/items/fa9fea1c813f76080fe7)
