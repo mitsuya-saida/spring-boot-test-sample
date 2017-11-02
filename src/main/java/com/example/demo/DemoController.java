@@ -2,7 +2,6 @@ package com.example.demo;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,18 +16,28 @@ import javax.validation.Valid;
 @Validated
 public class DemoController {
 
-    @Autowired
-    private DemoService demoService;
+    private final DemoService demoService;
 
-    @Autowired
-    private DemoRepository demoRepository;
+    private final DemoRepository demoRepository;
+
+    private final DemoClient demoClient;
 
     @GetMapping
-    public String demo(@Valid DemoRequest demoRequest) { // BindException?
+    public String demo(@Valid DemoRequest demoRequest) {
         DemoEntity demoEntity = demoRepository.findByCode(demoRequest.getCode());
         String value = demoEntity.getValue();
         String ret = demoService.greeting(value);
         return ret;
+    }
+
+    @GetMapping("/client")
+    public DemoApiResponse clientDemo() {
+        return demoClient.get();
+    }
+
+    @GetMapping("/api")
+    public DemoApiResponse api() {
+        return new DemoApiResponse("0123","namae");
     }
 
 }
